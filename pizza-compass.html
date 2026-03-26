@@ -1,387 +1,524 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Pizza Compass</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="description"
+    content="Pizza Compass - A minimalist tool to find your way to the perfect slice. Track your steps and find your destination.">
+  <title>Pizza Compass | Find Your Slice</title>
 
-  :root {
-    --bg: #0f0800;
-    --surface: #1c1005;
-    --border: #3a2008;
-    --orange: #ff6b35;
-    --gold: #f5c842;
-    --muted: #7a5030;
-    --text: #f0e0c0;
-  }
+  <!-- Premium Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-  html, body {
-    height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  .scene {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    width: 100%;
-    padding: 24px;
-  }
+    :root {
+      --bg: #0a0602;
+      --surface: #1a1108;
+      --surface-glass: rgba(28, 16, 5, 0.7);
+      --border: #3d240d;
+      --orange: #ff6b35;
+      --orange-glow: rgba(255, 107, 53, 0.4);
+      --gold: #f5c842;
+      --muted: #8a6040;
+      --text: #f8f4e8;
+      --transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
 
-  .compass-area {
-    position: relative;
-    width: min(70vw, 300px);
-    height: min(70vw, 300px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-  .ring {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 1.5px solid var(--border);
-  }
-  .ring::before {
-    content: '';
-    position: absolute;
-    inset: 12px;
-    border-radius: 50%;
-    border: 1px solid #2a1504;
-  }
+    /* Ambient Background Glow */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 150vw;
+      height: 150vh;
+      background: radial-gradient(circle at center, rgba(255, 107, 53, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-  .north-pip {
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--orange);
-    opacity: 0.5;
-  }
+    .main-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
 
-  .needle-wrap {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    will-change: transform;
-  }
+    .scene {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 32px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: var(--transition);
+    }
 
-  .pizza-svg {
-    width: min(52vw, 220px);
-    height: min(52vw, 220px);
-    transform: translateY(-8%);
-    filter: drop-shadow(0 4px 20px rgba(255,107,53,0.3));
-  }
+    .scene.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
-  .pivot {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--border);
-    border: 2px solid var(--muted);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-  }
+    .compass-area {
+      position: relative;
+      width: min(80vw, 340px);
+      height: min(80vw, 340px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-  .steps-block {
-    margin-top: 36px;
-    text-align: center;
-  }
+    .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: radial-gradient(circle at center, transparent 40%, rgba(26, 17, 8, 0.3) 100%);
+    }
 
-  .steps-num {
-    font-size: clamp(64px, 20vw, 96px);
-    font-weight: 800;
-    line-height: 1;
-    color: var(--gold);
-    letter-spacing: -4px;
-    font-variant-numeric: tabular-nums;
-  }
+    /* Radar Lines */
+    .ring::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        linear-gradient(90deg, transparent 49.5%, var(--border) 50%, transparent 50.5%),
+        linear-gradient(0deg, transparent 49.5%, var(--border) 50%, transparent 50.5%);
+      opacity: 0.1;
+    }
 
-  .steps-label {
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-top: 6px;
-  }
+    .north-pip {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--orange);
+      box-shadow: 0 0 10px var(--orange-glow);
+      z-index: 2;
+    }
 
-  .dist-pill {
-    margin-top: 22px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    padding: 7px 22px;
-    font-size: 13px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+    .needle-wrap {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      will-change: transform;
+      transition: transform 0.1s linear;
+      /* Smooth micro-rotations */
+    }
 
-  .dist-val {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-  }
+    .pizza-svg {
+      width: min(58vw, 240px);
+      height: min(58vw, 240px);
+      transform: translateY(-8%);
+      filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.5));
+      transition: transform 0.2s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+    }
 
-  .status {
-    position: fixed;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px;
-    color: var(--muted);
-    white-space: nowrap;
-    letter-spacing: 0.5px;
-    pointer-events: none;
-  }
+    .step-detected .pizza-svg {
+      transform: translateY(-8%) scale(1.1);
+    }
 
-  .perm-screen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 40px;
-    text-align: center;
-    z-index: 100;
-  }
+    .pivot {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--muted);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
 
-  .perm-screen .tagline {
-    font-size: 14px;
-    color: var(--muted);
-    line-height: 1.7;
-    max-width: 260px;
-  }
+    .steps-block {
+      margin-top: 40px;
+      text-align: center;
+    }
 
-  .perm-btn {
-    margin-top: 12px;
-    padding: 15px 42px;
-    background: var(--orange);
-    border: none;
-    border-radius: 100px;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-</style>
+    .steps-num {
+      font-size: clamp(72px, 24vw, 110px);
+      font-weight: 800;
+      line-height: 1;
+      color: var(--gold);
+      letter-spacing: -5px;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 10px 30px rgba(245, 200, 66, 0.15);
+    }
+
+    .steps-label {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .dist-pill {
+      margin-top: 28px;
+      background: var(--surface-glass);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 10px 24px;
+      font-size: 14px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .dist-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .status {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .perm-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 40px;
+      text-align: center;
+      z-index: 100;
+      transition: opacity 0.6s ease;
+    }
+
+    .perm-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .perm-screen .tagline {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 280px;
+    }
+
+    .perm-btn {
+      margin-top: 20px;
+      padding: 18px 56px;
+      background: var(--orange);
+      border: none;
+      border-radius: 100px;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 30px var(--orange-glow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .perm-btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 5px 15px var(--orange-glow);
+    }
+
+    /* Accessibility: Visually hidden but descriptive */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="perm-screen" id="permScreen">
-  <div style="font-size:56px">🍕</div>
-  <div style="font-size:24px;font-weight:800;color:var(--text);letter-spacing:-1px">Adiba Pizza</div>
-  <p class="tagline">Put your phone in your pocket.<br>Walk toward the slice.</p>
-  <button class="perm-btn" id="startBtn">Let's go</button>
-</div>
-
-<div class="scene" id="scene" style="display:none">
-  <div class="compass-area">
-    <div class="ring"><div class="north-pip"></div></div>
-    <div class="needle-wrap" id="needleWrap">
-      <svg class="pizza-svg" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
-        <!-- crust body -->
-        <path d="M100 10 L10 195 Q100 222 190 195 Z" fill="#b8700e"/>
-        <!-- crust inner lighter ring -->
-        <path d="M100 22 L18 190 Q100 214 182 190 Z" fill="#cf891e"/>
-        <!-- sauce -->
-        <path d="M100 28 L24 186 Q100 208 176 186 Z" fill="#c8301e"/>
-        <!-- cheese base -->
-        <path d="M100 36 L30 182 Q100 202 170 182 Z" fill="#f0c832"/>
-        <!-- cheese blobs -->
-        <ellipse cx="78" cy="98"  rx="17" ry="11" fill="#f5d84a" opacity="0.85"/>
-        <ellipse cx="124" cy="106" rx="15" ry="10" fill="#f5d84a" opacity="0.85"/>
-        <ellipse cx="100" cy="148" rx="19" ry="12" fill="#f5d84a" opacity="0.85"/>
-        <ellipse cx="64"  cy="150" rx="11" ry="7"  fill="#f5d84a" opacity="0.7"/>
-        <ellipse cx="137" cy="156" rx="12" ry="8"  fill="#f5d84a" opacity="0.7"/>
-        <!-- pepperoni -->
-        <circle cx="82"  cy="93"  r="13" fill="#8b1a1a"/>
-        <circle cx="120" cy="103" r="13" fill="#8b1a1a"/>
-        <circle cx="100" cy="148" r="13" fill="#8b1a1a"/>
-        <circle cx="63"  cy="149" r="10" fill="#8b1a1a"/>
-        <circle cx="138" cy="156" r="10" fill="#8b1a1a"/>
-        <!-- pepperoni sheen -->
-        <circle cx="78"  cy="89"  r="5" fill="#b82a2a" opacity="0.45"/>
-        <circle cx="116" cy="99"  r="5" fill="#b82a2a" opacity="0.45"/>
-        <circle cx="96"  cy="144" r="5" fill="#b82a2a" opacity="0.45"/>
-        <!-- tip glow -->
-        <circle cx="100" cy="13" r="5" fill="#ffd700" opacity="0.75"/>
-        <!-- crust bottom edge -->
-        <path d="M10 195 Q100 224 190 195" fill="none" stroke="#7a4800" stroke-width="10" stroke-linecap="round"/>
-        <path d="M13 193 Q100 218 187 193" fill="none" stroke="#c47818" stroke-width="4" stroke-linecap="round" opacity="0.45"/>
-      </svg>
+  <main class="main-container">
+    <div class="perm-screen" id="permScreen">
+      <div style="font-size:64px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3))">🍕</div>
+      <h1 style="font-size:32px; font-weight:800; color:var(--text); letter-spacing:-1.5px">Pizza Compass</h1>
+      <p class="tagline">Put your phone in your pocket.<br>Feel the pulse. Walk toward the slice.</p>
+      <button class="perm-btn" id="startBtn">Find My Slice</button>
     </div>
-    <div class="pivot"></div>
-  </div>
 
-  <div class="steps-block">
-    <div class="steps-num" id="stepsNum">0</div>
-    <div class="steps-label">steps</div>
-  </div>
+    <div class="scene" id="scene" aria-hidden="true">
+      <div class="compass-area" role="img" aria-label="Compass pointing toward pizza">
+        <div class="ring">
+          <div class="north-pip"></div>
+        </div>
+        <div class="needle-wrap" id="needleWrap">
+          <svg class="pizza-svg" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+            <!-- crust body -->
+            <path d="M100 10 L10 195 Q100 222 190 195 Z" fill="#b8700e" />
+            <path d="M100 22 L18 190 Q100 214 182 190 Z" fill="#cf891e" />
+            <!-- sauce -->
+            <path d="M100 28 L24 186 Q100 208 176 186 Z" fill="#c8301e" />
+            <!-- cheese base -->
+            <path d="M100 36 L30 182 Q100 202 170 182 Z" fill="#f0c832" />
+            <!-- cheese blobs -->
+            <ellipse cx="78" cy="98" rx="17" ry="11" fill="#f5d84a" opacity="0.85" />
+            <ellipse cx="124" cy="106" rx="15" ry="10" fill="#f5d84a" opacity="0.85" />
+            <ellipse cx="100" cy="148" rx="19" ry="12" fill="#f5d84a" opacity="0.85" />
+            <!-- pepperoni -->
+            <circle cx="82" cy="93" r="13" fill="#8b1a1a" />
+            <circle cx="120" cy="103" r="13" fill="#8b1a1a" />
+            <circle cx="100" cy="148" r="13" fill="#8b1a1a" />
+            <circle cx="63" cy="149" r="10" fill="#8b1a1a" />
+            <circle cx="138" cy="156" r="10" fill="#8b1a1a" />
+            <!-- tips/highlights -->
+            <circle cx="100" cy="13" r="5" fill="#ffd700" opacity="0.75" />
+            <path d="M10 195 Q100 224 190 195" fill="none" stroke="#7a4800" stroke-width="10" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="pivot"></div>
+      </div>
 
-  <div class="dist-pill">
-    <span style="font-size:14px">🍕</span>
-    <span class="dist-val" id="distVal">—</span>
-    <span>away</span>
-  </div>
-</div>
+      <div class="steps-block">
+        <div class="steps-num" id="stepsNum">0</div>
+        <div class="steps-label">steps walked</div>
+      </div>
 
-<div class="status" id="status">tap to start</div>
+      <div class="dist-pill">
+        <span style="font-size:16px">🍕</span>
+        <span class="dist-val" id="distVal">LOCATING...</span>
+        <span>away</span>
+      </div>
+    </div>
 
-<script>
-// ─── HARDCODED PIZZA TARGET ─────────────────────────────────
-const TARGET_LAT = -2.701123879157142;   // ← change to your pizza store
-const TARGET_LNG = 111.63259025804716;
-// ────────────────────────────────────────────────────────────
+    <div class="status" id="status">Ready to calibrate</div>
+  </main>
 
-const RAD = Math.PI / 180;
-let userLat = null, userLng = null, gpsHeading = 0;
-let steps = 0;
-let targetAngle = 0, currentAngle = 0;
-let rafId = null;
+  <script>
+    // ─── TARGET SETUP ──────────────────────────────────────────
+    const TARGET_LAT = -2.701123879157142;
+    const TARGET_LNG = 111.63259025804716;
+    // ────────────────────────────────────────────────────────────
 
-// ── haversine air distance (km) ──
-function haversine(la1, lo1, la2, lo2) {
-  const R = 6371;
-  const dLa = (la2 - la1) * RAD, dLo = (lo2 - lo1) * RAD;
-  const a = Math.sin(dLa/2)**2 + Math.cos(la1*RAD)*Math.cos(la2*RAD)*Math.sin(dLo/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
+    const RAD = Math.PI / 180;
+    let userLat = null, userLng = null;
+    let deviceHeading = 0; // Compass heading relative to North
+    let gpsHeading = null; // Heading from GPS (only valid if moving)
+    let steps = 0;
+    let targetAngle = 0, currentAngle = 0;
+    let rafId = null;
 
-// ── compass bearing to target (degrees from north) ──
-function bearing(la1, lo1, la2, lo2) {
-  const dLo = (lo2 - lo1) * RAD;
-  const y = Math.sin(dLo) * Math.cos(la2 * RAD);
-  const x = Math.cos(la1*RAD)*Math.sin(la2*RAD) - Math.sin(la1*RAD)*Math.cos(la2*RAD)*Math.cos(dLo);
-  return (Math.atan2(y, x) / RAD + 360) % 360;
-}
-
-function fmtDist(km) {
-  if (km < 1)  return Math.round(km * 1000) + ' m';
-  if (km < 10) return km.toFixed(1) + ' km';
-  return Math.round(km) + ' km';
-}
-
-// ── shortest-arc lerp for smooth rotation ──
-function shortArc(from, to) {
-  return ((to - from + 540) % 360) - 180;
-}
-
-function animateNeedle() {
-  const diff = shortArc(currentAngle, targetAngle);
-  if (Math.abs(diff) > 0.1) {
-    currentAngle += diff * 0.10;
-    document.getElementById('needleWrap').style.transform = `rotate(${currentAngle}deg)`;
-  }
-  rafId = requestAnimationFrame(animateNeedle);
-}
-
-function updateNeedle() {
-  if (userLat === null) return;
-  const b = bearing(userLat, userLng, TARGET_LAT, TARGET_LNG);
-  // slice tip points to pizza store relative to walking direction
-  targetAngle = b - gpsHeading;
-}
-
-// ── GPS ──
-function startGPS() {
-  if (!navigator.geolocation) { setStatus('no GPS'); return; }
-  navigator.geolocation.watchPosition(pos => {
-    userLat = pos.coords.latitude;
-    userLng = pos.coords.longitude;
-    if (pos.coords.heading != null && !isNaN(pos.coords.heading)) {
-      gpsHeading = pos.coords.heading;
+    // ── haversine air distance (km) ──
+    function haversine(la1, lo1, la2, lo2) {
+      const R = 6371;
+      const dLa = (la2 - la1) * RAD, dLo = (lo2 - lo1) * RAD;
+      const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * RAD) * Math.cos(la2 * RAD) * Math.sin(dLo / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
-    const km = haversine(userLat, userLng, TARGET_LAT, TARGET_LNG);
-    document.getElementById('distVal').textContent = fmtDist(km);
-    updateNeedle();
-    setStatus('GPS ±' + Math.round(pos.coords.accuracy) + ' m');
-  }, err => setStatus('GPS: ' + err.message),
-  { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
-}
 
-// ── STEP DETECTION ──────────────────────────────────────────
-// Works in any phone orientation (pocket, bag, hand).
-// Strategy: compute acceleration magnitude, apply a low-pass filter
-// to extract gravity, subtract to get motion residual, detect peaks.
-let gravMag  = 9.8;   // estimated gravity magnitude (low-pass)
-let prevRes  = 0;     // previous residual (for peak detection)
-let lastStep = 0;
+    // ── compass bearing to target (degrees from north) ──
+    function bearing(la1, lo1, la2, lo2) {
+      const dLo = (lo2 - lo1) * RAD;
+      const y = Math.sin(dLo) * Math.cos(la2 * RAD);
+      const x = Math.cos(la1 * RAD) * Math.sin(la2 * RAD) - Math.sin(la1 * RAD) * Math.cos(la2 * RAD) * Math.cos(dLo);
+      return (Math.atan2(y, x) / RAD + 360) % 360;
+    }
 
-const LP_ALPHA  = 0.92;   // low-pass weight  (higher = smoother baseline)
-const STEP_THR  = 1.8;    // residual peak threshold (m/s² above gravity)
-const DEBOUNCE  = 320;    // min ms between steps
+    function fmtDist(km) {
+      if (km < 0.001) return 'Here!';
+      if (km < 1) return Math.round(km * 1000) + ' m';
+      if (km < 10) return km.toFixed(1) + ' km';
+      return Math.round(km) + ' km';
+    }
 
-function onMotion(e) {
-  const ag = e.accelerationIncludingGravity;
-  if (!ag || ag.x == null) return;
+    function shortArc(from, to) {
+      return ((to - from + 540) % 360) - 180;
+    }
 
-  const raw = Math.sqrt(ag.x**2 + ag.y**2 + ag.z**2);
-  gravMag = LP_ALPHA * gravMag + (1 - LP_ALPHA) * raw;  // low-pass → gravity
-  const residual = raw - gravMag;                        // high-pass → movement
+    function animateNeedle() {
+      const diff = shortArc(currentAngle, targetAngle);
+      // Lerp for smooth rotation
+      if (Math.abs(diff) > 0.1) {
+        currentAngle += diff * 0.15;
+        document.getElementById('needleWrap').style.transform = `rotate(${currentAngle}deg)`;
+      }
+      rafId = requestAnimationFrame(animateNeedle);
+    }
 
-  const now = Date.now();
-  // positive zero-crossing with sufficient amplitude = step peak
-  if (prevRes <= STEP_THR && residual > STEP_THR && (now - lastStep) > DEBOUNCE) {
-    steps++;
-    lastStep = now;
-    document.getElementById('stepsNum').textContent = steps;
-  }
-  prevRes = residual;
-}
+    function updateNeedle() {
+      if (userLat === null) return;
+      const b = bearing(userLat, userLng, TARGET_LAT, TARGET_LNG);
 
-function startMotion() {
-  if (!window.DeviceMotionEvent) { setStatus('no accelerometer'); return; }
-  window.addEventListener('devicemotion', onMotion, { passive: true });
-}
+      // LOGIC: 
+      // If we have deviceOrientation (magnetometer), use it because it works while standing still.
+      // Otherwise fall back to GPS heading (only works while walking).
+      const currentBearing = (deviceHeading !== null) ? deviceHeading : (gpsHeading || 0);
 
-function setStatus(msg) {
-  document.getElementById('status').textContent = msg;
-}
+      targetAngle = b - currentBearing;
+    }
 
-// ── entry point ──
-document.getElementById('startBtn').addEventListener('click', async () => {
-  // iOS 13+ requires explicit permission for motion
-  if (typeof DeviceMotionEvent !== 'undefined' &&
-      typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const res = await DeviceMotionEvent.requestPermission();
-      if (res !== 'granted') setStatus('motion denied');
-    } catch (_) {}
-  }
-  document.getElementById('permScreen').style.display = 'none';
-  document.getElementById('scene').style.display = 'flex';
-  animateNeedle();
-  startGPS();
-  startMotion();
-  setStatus('getting GPS…');
-});
-</script>
+    // ── GPS ──
+    function startGPS() {
+      if (!navigator.geolocation) { setStatus('Incompatible browser'); return; }
+      navigator.geolocation.watchPosition(pos => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+
+        if (pos.coords.heading !== null && !isNaN(pos.coords.heading)) {
+          gpsHeading = pos.coords.heading;
+        }
+
+        const km = haversine(userLat, userLng, TARGET_LAT, TARGET_LNG);
+        document.getElementById('distVal').textContent = fmtDist(km).toUpperCase();
+        updateNeedle();
+        setStatus('GPS LOCKED ±' + Math.round(pos.coords.accuracy) + 'M');
+      }, err => setStatus('GPS ERROR: ' + err.message),
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
+    }
+
+    // ── ORIENTATION (Real Compass) ──
+    function startOrientation() {
+      const handleOrientation = (e) => {
+        // webkitCompassHeading is the gold standard for iOS
+        if (e.webkitCompassHeading !== undefined) {
+          deviceHeading = e.webkitCompassHeading;
+        } else if (e.absolute === true && e.alpha !== null) {
+          // absolute alpha for Android
+          deviceHeading = 360 - e.alpha;
+        }
+        updateNeedle();
+      };
+
+      window.addEventListener('deviceorientation', handleOrientation, true);
+      // iOS fallback for the event name if needed
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    }
+
+    // ── STEP DETECTION ──
+    let gravMag = 9.8;
+    let prevRes = 0;
+    let lastStep = 0;
+    const LP_ALPHA = 0.92;
+    const STEP_THR = 1.8;
+    const DEBOUNCE = 350;
+
+    function onMotion(e) {
+      const ag = e.accelerationIncludingGravity;
+      if (!ag || ag.x == null) return;
+
+      const raw = Math.sqrt(ag.x ** 2 + ag.y ** 2 + ag.z ** 2);
+      gravMag = LP_ALPHA * gravMag + (1 - LP_ALPHA) * raw;
+      const residual = raw - gravMag;
+
+      const now = Date.now();
+      if (prevRes <= STEP_THR && residual > STEP_THR && (now - lastStep) > DEBOUNCE) {
+        steps++;
+        lastStep = now;
+        document.getElementById('stepsNum').textContent = steps;
+
+        // Visual Pulse Feedback
+        const scene = document.getElementById('scene');
+        scene.classList.add('step-detected');
+        setTimeout(() => scene.classList.remove('step-detected'), 150);
+      }
+      prevRes = residual;
+    }
+
+    function startMotion() {
+      if (window.DeviceMotionEvent) {
+        window.addEventListener('devicemotion', onMotion, { passive: true });
+      }
+    }
+
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    // ── Entry ──
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      // Permission for Motion/Orientation (iOS 13+)
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          await DeviceOrientationEvent.requestPermission();
+        } catch (e) { console.error(e); }
+      }
+      if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+          await DeviceMotionEvent.requestPermission();
+        } catch (e) { console.error(e); }
+      }
+
+      // Transitions
+      const permScreen = document.getElementById('permScreen');
+      const scene = document.getElementById('scene');
+
+      permScreen.classList.add('fade-out');
+      setTimeout(() => {
+        permScreen.style.display = 'none';
+        scene.style.display = 'flex';
+        // Small delay to trigger the fade-in animation
+        requestAnimationFrame(() => scene.classList.add('active'));
+      }, 600);
+
+      animateNeedle();
+      startGPS();
+      startOrientation();
+      startMotion();
+      setStatus('Calibrating Sensors...');
+    });
+  </script>
 </body>
+
 </html>
